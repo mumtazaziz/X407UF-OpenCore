@@ -1,7 +1,9 @@
-import json
 import os
 import shutil
 import urllib.request
+from github import Github
+
+g = Github()
 
 
 def prepareOutput(outdir: str) -> None:
@@ -43,21 +45,20 @@ def getFilenameComponents(filename: str) -> list[str]:
 
 
 def downloadLatestReleaseFromGitHub(repo: str, cachedir: str | None = None) -> str:
-    data = json.load(urllib.request.urlopen(
-        'https://api.github.com/repos/'+repo+'/releases/latest'))
+    release = g.get_repo(repo).get_latest_release()
     asset = next(
-        (x for x in data['assets'] if 'RELEASE' in x['name']),
-        data['assets'][0])
-    filename: str = asset['name']
+        (x for x in release.assets if 'RELEASE' in x.name),
+        release.assets[0])
+    filename: str = asset.name
     if (cachedir is not None and os.path.exists(os.path.join(cachedir, filename))):
         print('Use cached download for '+filename)
         return os.path.join(cachedir, filename)
-    download_url = asset['browser_download_url']
     print('Downloading ' + filename + ' from ' + repo)
     downloaded_path = urllib.request.urlretrieve(
-        download_url,
+        asset.browser_download_url,
         os.path.join(cachedir, filename)
-        if cachedir is not None else None
+        if cachedir is not None
+        else None
     )[0]
     print('Downloaded ' + filename + ' as ' + downloaded_path)
     return downloaded_path
