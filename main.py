@@ -25,7 +25,7 @@ preserved_tool_files = [
 ]
 
 
-def getOpenCore(outdir: str, tempdir=mkdtemp(), cachedir: str = None):
+def getOpenCore(outdir: str, tempdir: str = mkdtemp(), cachedir: str | None = None):
     downloaded_path = helper.downloadLatestReleaseFromGitHub(
         'acidanthera/OpenCorePkg', cachedir)
     with ZipFile(downloaded_path) as downloaded_zip:
@@ -66,7 +66,7 @@ def getOpenCore(outdir: str, tempdir=mkdtemp(), cachedir: str = None):
         shutil.rmtree(tempdir)
 
 
-def getKext(repo: str, outdir: str, kextfiles: list[str] = None, tempdir=mkdtemp(), cachedir: str = None):
+def getKext(repo: str, outdir: str, kextfiles: list[str] | None = None, tempdir: str = mkdtemp(), cachedir: str | None = None):
     if kextfiles is None:
         kextfiles = [repo.split('/')[1] + '.kext']
     downloaded_path = helper.downloadLatestReleaseFromGitHub(repo, cachedir)
@@ -75,7 +75,7 @@ def getKext(repo: str, outdir: str, kextfiles: list[str] = None, tempdir=mkdtemp
         downloaded_zip.extractall(tempdir)
         # Move kext
         if os.path.exists(os.path.join(tempdir, 'Kexts')):
-            kextfiles = (os.path.join('Kexts', x) for x in kextfiles)
+            kextfiles = list(os.path.join('Kexts', x) for x in kextfiles)
         for kextfile in kextfiles:
             shutil.move(
                 os.path.join(tempdir, kextfile),
@@ -84,22 +84,17 @@ def getKext(repo: str, outdir: str, kextfiles: list[str] = None, tempdir=mkdtemp
         shutil.rmtree(tempdir)
 
 
-def main():
-    # Prepare output directory
-    outdir = 'dist'
-    shutil.rmtree(outdir, ignore_errors=True)
-    os.mkdir(outdir)
-    # Prepare cache directory
-    cachedir = 'downloads'
+def main(outdir: str = 'dist', cachedir: str = 'downloads'):
+    helper.prepareOutput(outdir)
     helper.prepareCache(cachedir)
     # Gathering files
     getOpenCore(outdir, cachedir=cachedir)
+    getKext('acidanthera/AppleALC', outdir, cachedir=cachedir)
     getKext('acidanthera/BrcmPatchRAM', outdir, kextfiles=[
         'BlueToolFixup.kext'
     ], cachedir=cachedir)
     getKext('acidanthera/CpuTscSync', outdir, cachedir=cachedir)
     getKext('acidanthera/Lilu', outdir, cachedir=cachedir)
-    getKext('acidanthera/WhateverGreen', outdir, cachedir=cachedir)
     getKext('acidanthera/VoodooPS2', outdir, kextfiles=[
         'VoodooPS2Controller.kext'
     ], cachedir=cachedir)
@@ -109,6 +104,7 @@ def main():
         'SMCProcessor.kext',
         'SMCSuperIO.kext',
     ], cachedir=cachedir)
+    getKext('acidanthera/WhateverGreen', outdir, cachedir=cachedir)
     getKext('hieplpvip/AsusSMC', outdir, cachedir=cachedir)
     getKext('OpenIntelWireless/IntelBluetoothFirmware', outdir, kextfiles=[
         'IntelBluetoothFirmware.kext',
@@ -119,6 +115,7 @@ def main():
         'VoodooI2C.kext',
         'VoodooI2CHID.kext'
     ], cachedir=cachedir)
+    helper.cleanupCache(cachedir)
 
 
 if __name__ == "__main__":
